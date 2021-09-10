@@ -194,8 +194,10 @@ class UnetGeneratorCSA(nn.Module):
         unet_block = UnetSkipConnectionBlock_3(ngf * 8, ngf * 8, input_nc=None,submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)
         unet_csa = CSA(ngf * 4, ngf * 8, opt, csa_model,cosis_list ,cosis_list2,mask_global, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
         unet_block = UnetSkipConnectionBlock_3(ngf * 2, ngf * 4, input_nc=None,submodule=unet_csa, norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock_3(ngf, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock_3(output_nc, ngf,input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)
+        # unet_block = UnetSkipConnectionBlock_3(ngf, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock_3(ngf * 2, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer) # Added
+        unet_block = UnetSkipConnectionBlock_3(ngf * 4, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer) # Added
+        unet_block = UnetSkipConnectionBlock_3(output_nc, ngf * 4, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer) # changed to ngf * 4: 256 -> 128 -> 128
 
         self.model = unet_block
 
@@ -369,8 +371,14 @@ class UnetGenerator(nn.Module):
             unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)
         unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
         unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)
+        # unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
+        # unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock_3(ngf * 2, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer) # Added
+        unet_block = UnetSkipConnectionBlock_3(ngf * 4, ngf * 2,input_nc=None, submodule=unet_block, norm_layer=norm_layer) # Added
+        unet_block = UnetSkipConnectionBlock_3(output_nc, ngf * 4, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer) # changed to ngf * 4: 256 -> 128 -> 128
+        
+
+        # Decide whether number of inner channels should be incremented
 
         self.model = unet_block
 

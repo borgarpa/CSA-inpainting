@@ -26,6 +26,8 @@ class CSA(BaseModel):
                                    opt.fineSize, opt.fineSize)
         self.input_B = self.Tensor(opt.batchSize, opt.output_nc,
                                    opt.fineSize, opt.fineSize)
+        self.sent_s1 = self.Tensor(opt.batchSize, opt.sent_s1_nc,
+                                   opt.fineSize, opt.fineSize)
 
         # batchsize should be 1 for mask_global
         self.mask_global = torch.ByteTensor(1, 1, opt.fineSize, opt.fineSize)
@@ -42,8 +44,10 @@ class CSA(BaseModel):
             self.use_gpu = True
             self.mask_global = self.mask_global.cuda()
 
+        # Here input_nc_g is 12 (rough S2) + 12 (masked S2) + 4 (S1) = 28
         self.netG,self.Cosis_list,self.Cosis_list2, self.CSA_model= networks.define_G(opt.input_nc_g, opt.output_nc, opt.ngf,
                                       opt.which_model_netG, opt, self.mask_global, opt.norm, opt.use_dropout, opt.init_type, self.gpu_ids, opt.init_gain)
+        # Here input_nc is 12 (S2) + 4 (S1) = 16
         self.netP,_,_,_=networks.define_G(opt.input_nc, opt.output_nc, opt.ngf,
                                     opt.which_model_netP, opt, self.mask_global, opt.norm, opt.use_dropout, opt.init_type, self.gpu_ids, opt.init_gain)
         if self.isTrain:
@@ -98,13 +102,14 @@ class CSA(BaseModel):
                 networks.print_network(self.netF)
             print('-----------------------------------------------')
 
-    def set_input(self,input,mask):
+    def set_input(self,input, mask, sent1):
 
         input_A = input
         input_B = input.clone()
         input_mask=mask
 
         self.input_A.resize_(input_A.size()).copy_(input_A)
+        self.sent_s1.resize_(sent1.size()).copy_(sent1)
         self.input_B.resize_(input_B.size()).copy_(input_B)
 
         self.image_paths = 0
@@ -112,18 +117,21 @@ class CSA(BaseModel):
         if self.opt.mask_type == 'center':
             self.mask_global=self.mask_global
 
-        elif self.opt.mask_type == 'random':
+        elif self.opt.mask_type == 'manual':
             self.mask_global.zero_()
             self.mask_global=input_mask
         else:
             raise ValueError("Mask_type [%s] not recognized." % self.opt.mask_type)
 
-        self.ex_mask = self.mask_global.expand(1, 3, self.mask_global.size(2), self.mask_global.size(3)) # 1*c*h*w
+        self.ex_mask = self.mask_global.expand(1, self.input_A.size(1), self.mask_global.size(2), self.mask_global.size(3)) # 1*c*h*w
 
         self.inv_ex_mask = torch.add(torch.neg(self.ex_mask.float()), 1).byte()
-        self.input_A.narrow(1,0,1).masked_fill_(self.mask_global, 2*123.0/255.0 - 1.0)
-        self.input_A.narrow(1,1,1).masked_fill_(self.mask_global, 2*104.0/255.0 - 1.0)
-        self.input_A.narrow(1,2,1).masked_fill_(self.mask_global, 2*117.0/255.0 - 1.0)
+        for c in range(self.input_A.size()[1]):
+            self.input_A.narrow(1, c, 1).masked_fill_(self.mask_global, 2*self.input_A[:,c,:,:].mean()/255.0 - 1.0)
+
+        # self.input_A.narrow(1,0,1).masked_fill_(self.mask_global, 2*123.0/255.0 - 1.0)
+        # self.input_A.narrow(1,1,1).masked_fill_(self.mask_global, 2*104.0/255.0 - 1.0)
+        # self.input_A.narrow(1,2,1).masked_fill_(self.mask_global, 2*117.0/255.0 - 1.0)
 
         self.set_latent_mask(self.mask_global, 3, self.opt.threshold)
 
@@ -133,13 +141,14 @@ class CSA(BaseModel):
         self.Cosis_list[0].set_mask(mask_global, self.opt)
         self.Cosis_list2[0].set_mask(mask_global, self.opt)
     def forward(self):
-        self.real_A =self.input_A.to(self.device)
-        self.fake_P= self.netP(self.real_A)
-        self.un=self.fake_P.clone()
-        self.Unknowregion=self.un.data.masked_fill_(self.inv_ex_mask, 0)
-        self.knownregion=self.real_A.data.masked_fill_(self.ex_mask, 0)
-        self.Syn=self.Unknowregion+self.knownregion
-        self.Middle=torch.cat((self.Syn,self.input_A),1)
+        # sent_s1 is not concatenated when setting input so that radar information is not overwritten by mask
+        self.real_A = self.input_A.to(self.device)
+        self.fake_P =  self.netP(torch.cat((self.real_A, self.sent_s1), 1))
+        self.un = self.fake_P.clone()
+        self.Unknowregion = self.un.data.masked_fill_(self.inv_ex_mask, 0)
+        self.knownregion = self.real_A.data.masked_fill_(self.ex_mask, 0)
+        self.Syn = self.Unknowregion+self.knownregion
+        self.Middle = torch.cat((self.Syn, self.input_A, self.sent_s1), 1)
         self.fake_B = self.netG(self.Middle)
         self.real_B = self.input_B.to(self.device)
 
@@ -151,12 +160,12 @@ class CSA(BaseModel):
 
     def test(self):
         self.real_A = self.input_A.to(self.device)
-        self.fake_P= self.netP(self.real_A)
+        self.fake_P= self.netP(torch.cat((self.real_A, self.sent_s1), 1))
         self.un=self.fake_P.clone()
         self.Unknowregion=self.un.data.masked_fill_(self.inv_ex_mask, 0)
         self.knownregion=self.real_A.data.masked_fill_(self.ex_mask, 0)
         self.Syn=self.Unknowregion+self.knownregion
-        self.Middle=torch.cat((self.Syn,self.input_A),1)
+        self.Middle=torch.cat((self.Syn, self.input_A, self.sent_s1),1)
         self.fake_B = self.netG(self.Middle)
         self.real_B = self.input_B.to(self.device)
 
@@ -200,7 +209,9 @@ class CSA(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake,pred_real, False)+self.criterionGAN(pred_fake_f, pred_real_F,False)
 
         # Second, G(A) = B
-        self.loss_G_L1 =( self.criterionL1(self.fake_B, self.real_B) +self.criterionL1(self.fake_P, self.real_B) )* self.opt.lambda_A
+        self.loss_G_L1 =(
+            self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B) # NDVI loss regularizer should be added here
+            )* self.opt.lambda_A
 
 
         self.loss_G = self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
