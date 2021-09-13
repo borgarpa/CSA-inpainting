@@ -1,5 +1,6 @@
 import random
 import torch
+import cv2
 import numpy as np
 from PIL import Image
 from glob import glob
@@ -40,7 +41,8 @@ class Data_load(torch.utils.data.Dataset):
         sent1 = self.normalization[1](sent1)
 
 
-        mask = Image.open(self.mask_paths[index]) #[random.randint(0, self.N_mask - 1)])
+        # mask = Image.open(self.mask_paths[index]) #[random.randint(0, self.N_mask - 1)])
+        mask = cv2.imread(self.mask_paths[index], cv2.IMREAD_GRAYSCALE) #[random.randint(0, self.N_mask - 1)])
         mask = self.transform(mask) ### Remove RGB transformation
         
         return gt_img, mask, sent1
