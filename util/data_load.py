@@ -1,5 +1,6 @@
 import random
 import torch
+import numpy as np
 from PIL import Image
 from glob import glob
 
@@ -26,14 +27,14 @@ class Data_load(torch.utils.data.Dataset):
         ### TODO: Change Image.open by either rasterio.open or np.load. Datatype is changed to uint8 during the transform operation
         # gt_img = rasterio.open(self.paths[index])
         
-        gt_img = Image.open(self.paths[index])
+        gt_img = np.load(self.paths[index])
         # gt_img = self.transform(gt_img) ### Remove RGB transformation
         gt_img = self.data_cast[0](gt_img)
         gt_img = torch.cat(tuple(self.transform(gt_img[n, :, :]) for n in range(gt_img.size(0))), 0) # im in format CxHxW
         gt_img = self.normalization[0](gt_img)
 
         # sent1 = rasterio.open(self.s1_paths[index])
-        sent1 = Image.open(self.s1_paths[index])
+        sent1 = np.load(self.s1_paths[index])
         sent1 = self.data_cast[1](sent1)
         sent1 = torch.cat(tuple(self.transform(sent1[n, :, :]) for n in range(sent1.size(0))), 0)
         sent1 = self.normalization[1](sent1)
