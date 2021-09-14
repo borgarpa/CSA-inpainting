@@ -43,7 +43,9 @@ class Data_load(torch.utils.data.Dataset):
 
         # mask = Image.open(self.mask_paths[index]) #[random.randint(0, self.N_mask - 1)])
         mask = cv2.imread(self.mask_paths[index], cv2.IMREAD_GRAYSCALE) #[random.randint(0, self.N_mask - 1)])
-        mask = self.transform(mask.type(torch.bool)) ### Remove RGB transformation
+        mask = torch.tensor(mask, dtype=torch.uint8)
+        mask = self.transform(mask) ### Remove RGB transformation
+        mask = mask.type(torch.bool)
         
         return gt_img, mask, sent1
 
