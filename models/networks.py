@@ -230,7 +230,7 @@ class UnetSkipConnectionBlock_3(nn.Module):
         # for the outermost, the special is `tanh`
         if outermost:
 
-            upconv_3 = nn.ConvTranspose2d(inner_nc, outer_nc, # inner_nc * 2,
+            upconv_3 = nn.ConvTranspose2d(inner_nc * 2, outer_nc, # inner_nc * 2,
                                         kernel_size=3, stride=1,
                                         padding=1)
             down = [downconv_3]
