@@ -55,7 +55,7 @@ class CSA(BaseModel):
             if opt.gan_type == 'vanilla':
                 use_sigmoid = True  # only vanilla GAN using BCECriterion
 
-            self.netD = networks.define_D(opt.input_nc, opt.ndf,
+            self.netD = networks.define_D(opt.output_nc, opt.ndf,
                                           opt.which_model_netD,
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.init_type, self.gpu_ids, opt.init_gain)
             self.netF = networks.define_D(opt.input_nc, opt.ndf,
