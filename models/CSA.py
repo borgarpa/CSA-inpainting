@@ -20,7 +20,7 @@ class CSA(BaseModel):
         self.isTrain = opt.isTrain
 
 
-        self.vgg=Vgg16(requires_grad=False)
+        self.vgg=Vgg16(requires_grad=False, local='pretrained/vgg16_s2_weights.pth')
         self.vgg=self.vgg.cuda()
         self.input_A = self.Tensor(opt.batchSize, opt.input_nc,
                                    opt.fineSize, opt.fineSize)

@@ -4,9 +4,9 @@ from torchvision import models
 from collections import namedtuple
 
 class Vgg16(torch.nn.Module):
-    def __init__(self, requires_grad=False):
+    def __init__(self, requires_grad=False, local=None):
         super(Vgg16, self).__init__()
-        vgg_pretrained_features = models.vgg16(pretrained=True).features
+        vgg_pretrained_features = models.vgg16(pretrained=True, local=local).features
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()
         self.slice3 = torch.nn.Sequential()
