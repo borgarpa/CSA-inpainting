@@ -209,12 +209,18 @@ class CSA(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake,pred_real, False)+self.criterionGAN(pred_fake_f, pred_real_F,False)
 
         # Second, G(A) = B
-        self.loss_G_L1 =(
+        fake_P_NDVI = (self.fake_P[3, ...] - self.fake_P[0, ...])/(self.fake_P[3, ...] + self.fake_P[0, ...]) # NOTE: rasterio shuffles bands when saving
+        fake_B_NDVI = (self.fake_B[3, ...] - self.fake_B[0, ...])/(self.fake_B[3, ...] + self.fake_B[0, ...]) # NOTE: rasterio shuffles bands when saving
+        real_B_NDVI = (self.real_B[3, ...] - self.real_B[0, ...])/(self.real_B[3, ...] + self.real_B[0, ...])
+        self.loss_NDVI_L1 = (
+            self.criterionL1(fake_P_NDVI, real_B_NDVI) + self.criterionL1(fake_B_NDVI, real_B_NDVI)
+            )*self.opt.lambda_NDVI
+        self.loss_G_L1 = (
             self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B) # NDVI loss regularizer should be added here
             )* self.opt.lambda_A
 
 
-        self.loss_G = self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
+        self.loss_G = self.loss_NDVI_L1 + self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
 
         # Third add additional netG contraint loss!
         self.ng_loss_value = 0
@@ -247,6 +253,7 @@ class CSA(BaseModel):
 
     def get_current_errors(self):
         return OrderedDict([('G_GAN', self.loss_G_GAN.data.item()),
+                            ('G_L1_NDVI', self.loss_NDVI_L1.data.item()),
                             ('G_L1', self.loss_G_L1.data.item()),
                             ('D', self.loss_D_fake.data.item()),
                             ('F', self.loss_F_fake.data.item())
