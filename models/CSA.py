@@ -209,10 +209,9 @@ class CSA(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake,pred_real, False)+self.criterionGAN(pred_fake_f, pred_real_F,False)
 
         # Second, G(A) = B
-        print(self.fake_P.shape)
-        fake_P_NDVI = (self.fake_P[3, :, :] - self.fake_P[0, :, :])/(self.fake_P[3, :, :] + self.fake_P[0, :, :]) # NOTE: rasterio shuffles bands when saving
-        fake_B_NDVI = (self.fake_B[3, :, :] - self.fake_B[0, :, :])/(self.fake_B[3, :, :] + self.fake_B[0, :, :]) # NOTE: rasterio shuffles bands when saving
-        real_B_NDVI = (self.real_B[3, :, :] - self.real_B[0, :, :])/(self.real_B[3, :, :] + self.real_B[0, :, :])
+        fake_P_NDVI = (self.fake_P[:, 3, :, :] - self.fake_P[:, 0, :, :])/(self.fake_P[:, 3, :, :] + self.fake_P[:, 0, :, :]) # NOTE: rasterio shuffles bands when saving
+        fake_B_NDVI = (self.fake_B[:, 3, :, :] - self.fake_B[:, 0, :, :])/(self.fake_B[:, 3, :, :] + self.fake_B[:, 0, :, :]) 
+        real_B_NDVI = (self.real_B[:, 3, :, :] - self.real_B[:, 0, :, :])/(self.real_B[:, 3, :, :] + self.real_B[:, 0, :, :])
         self.loss_NDVI_L1 = (
             self.criterionL1(fake_P_NDVI, real_B_NDVI) + self.criterionL1(fake_B_NDVI, real_B_NDVI)
             )*self.opt.lambda_NDVI
