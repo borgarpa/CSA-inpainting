@@ -213,13 +213,21 @@ class CSA(BaseModel):
         fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # NOTE: rasterio shuffles bands when saving
         fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
         real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
+        real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
         self.loss_NDVI_L1 = (
-            self.criterionL1(fake_P_NDVI, real_B_NDVI) + self.criterionL1(fake_B_NDVI, real_B_NDVI)
+                self.criterionL1(fake_P_NDVI*self.ex_mask, real_B_NDVI*self.ex_mask) +\
+                self.criterionL1(fake_B_NDVI*self.ex_mask, real_B_NDVI*self.ex_mask) +\
+                self.criterionL1(fake_P_NDVI*self.ex_mask, real_A_NDVI*self.ex_mask) +\
+                self.criterionL1(fake_B_NDVI*self.ex_mask, real_A_NDVI*self.ex_mask)
             )*self.opt.lambda_NDVI
          
         ### L1 with clouds loss
-        num = (self.fake_B-self.real_B)*self.ex_mask+(self.fake_P-self.real_B)*self.ex_mask+(self.fake_P-self.real_A)*self.inv_ex_mask
-        self.loss_CARL_L1 = torch.mean(torch.abs(num))*self.opt.lambda_CARL
+        self.loss_CARL_L1 = (
+                self.criterionL1(self.fake_P*self.ex_mask, self.real_B*self.ex_mask) +\
+                self.criterionL1(self.fake_B*self.ex_mask, self.real_B*self.ex_mask) +\
+                self.criterionL1(self.fake_P*self.inv_ex_mask, self.real_A*self.inv_ex_mask) +\
+                self.criterionL1(self.fake_B*self.inv_ex_mask, self.real_A*self.inv_ex_mask)
+            )*self.opt.lambda_CARL
 
         self.loss_G_L1 = (
             self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B)
