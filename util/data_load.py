@@ -13,7 +13,6 @@ class Data_load(torch.utils.data.Dataset):
         self.normalization = normalization
         self.data_cast = data_cast
 
-
         self.paths = glob('{:s}/*'.format(img_root),
                               recursive=True)
 

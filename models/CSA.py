@@ -125,8 +125,8 @@ class CSA(BaseModel):
         self.ex_mask = self.mask_global.expand(1, self.input_A.size(1), self.mask_global.size(2), self.mask_global.size(3)) # 1*c*h*w
 
         self.inv_ex_mask = torch.add(torch.neg(self.ex_mask.float()), 1).byte()
-        for c in range(self.input_A.size()[1]):
-            self.input_A.narrow(1, c, 1).masked_fill_(self.mask_global.type(torch.bool), 2*self.input_A[:,c,:,:].mean()/255.0 - 1.0)
+        # for c in range(self.input_A.size()[1]):
+        #     self.input_A.narrow(1, c, 1).masked_fill_(self.mask_global.type(torch.bool), 2*self.input_A[:,c,:,:].mean()/255.0 - 1.0)
 
         # self.input_A.narrow(1,0,1).masked_fill_(self.mask_global, 2*123.0/255.0 - 1.0)
         # self.input_A.narrow(1,1,1).masked_fill_(self.mask_global, 2*104.0/255.0 - 1.0)
@@ -142,7 +142,7 @@ class CSA(BaseModel):
     def forward(self):
         # sent_s1 is not concatenated when setting input so that radar information is not overwritten by mask
         self.real_A = self.input_A.to(self.device)
-        self.fake_P =  self.netP(torch.cat((self.real_A, self.sent_s1), 1))
+        self.fake_P =  self.netP(torch.cat((self.real_A, self.sent_s1, self.mask_global), 1))
         self.un = self.fake_P.clone()
         self.Unknowregion = self.un.data.masked_fill_(self.inv_ex_mask.type(torch.bool), 0)
         self.knownregion = self.real_A.data.masked_fill_(self.ex_mask.type(torch.bool), 0)
@@ -209,8 +209,8 @@ class CSA(BaseModel):
 
         # Second, G(A) = B
         ### NDVI-CARL Loss
-        fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # TODO: rasterio shuffles bands when saving, reorder them correctly
         fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
+        fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # TODO: rasterio shuffles bands when saving, reorder them correctly
         real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
         real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
 
