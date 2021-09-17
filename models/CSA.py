@@ -209,32 +209,26 @@ class CSA(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake,pred_real, False)+self.criterionGAN(pred_fake_f, pred_real_F,False)
 
         # Second, G(A) = B
-        ### NDVI Loss
+        ### NDVI-CARL Loss
         fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # TODO: rasterio shuffles bands when saving
         fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
         real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
         real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
-        num = ((fake_B_NDVI - real_B_NDVI) + (fake_P_NDVI - real_B_NDVI)) * self.ex_mask +\
-                ((fake_B_NDVI - real_A_NDVI) + (fake_P_NDVI - real_A_NDVI)) * self.inv_ex_mask
-        self.loss_NDVI_L1 = torch.mean(torch.abs(num))*self.opt.lambda_NDVI
+        num_P =  (fake_P_NDVI - real_B_NDVI) * self.ex_mask + (fake_P_NDVI - real_A_NDVI) * self.inv_ex_mask
+        num_B =  (fake_B_NDVI - real_B_NDVI) * self.ex_mask + (fake_B_NDVI - real_A_NDVI) * self.inv_ex_mask
+        self.loss_NDVI_L1 = (torch.mean(torch.abs(num_P)) + torch.mean(torch.abs(num_B))) * self.opt.lambda_NDVI
         
-        # self.loss_NDVI_L1 = (
-        #         self.criterionL1(fake_P_NDVI*self.ex_mask, real_B_NDVI*self.ex_mask) +\
-        #         self.criterionL1(fake_B_NDVI*self.ex_mask, real_B_NDVI*self.ex_mask) +\
-        #         self.criterionL1(fake_P_NDVI*self.ex_mask, real_A_NDVI*self.ex_mask) +\
-        #         self.criterionL1(fake_B_NDVI*self.ex_mask, real_A_NDVI*self.ex_mask)
-        #     )*self.opt.lambda_NDVI
-         
-        ### L1 with clouds loss                                                                                  
-        num = ((self.fake_B - self.real_B) + (self.fake_P - self.real_B)) * self.ex_mask +\
-                ((self.fake_B - self.real_A) + (self.fake_P - self.real_A)) * self.inv_ex_mask
-        self.loss_CARL_L1 = torch.mean(torch.abs(num))*self.opt.lambda_CARL
+        ### Overall CARL loss                                                                                  
+        num_P =  (self.fake_P - self.real_B) * self.ex_mask + (self.fake_P - self.real_A) * self.inv_ex_mask
+        num_B =  (self.fake_B - self.real_B) * self.ex_mask + (self.fake_B - self.real_A) * self.inv_ex_mask
+        self.loss_CARL_L1 = (torch.mean(torch.abs(num_P)) + torch.mean(torch.abs(num_B))) * self.opt.lambda_CARL
 
+        ### L1 reconstruction loss (regularizer)
         self.loss_G_L1 = (
             self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B)
             )* self.opt.lambda_A
 
-
+        ### Overall
         self.loss_G = self.loss_NDVI_L1 + self.loss_CARL_L1 + self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
 
         # Third add additional netG constraint loss!
