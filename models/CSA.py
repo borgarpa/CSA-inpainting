@@ -214,8 +214,8 @@ class CSA(BaseModel):
         fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
         real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
         real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
-        num = ((fake_B_NDVI-real_B_NDVI) + (fake_P_NDVI-real_B_NDVI)) * self.ex_mask +\
-                ((fake_P_NDVI-real_A_NDVI) + (fake_B_NDVI-real_A_NDVI)) * self.inv_ex_mask
+        num = ((fake_B_NDVI - real_B_NDVI) + (fake_P_NDVI - real_B_NDVI)) * self.ex_mask +\
+                ((fake_B_NDVI - real_A_NDVI) + (fake_P_NDVI - real_A_NDVI)) * self.inv_ex_mask
         self.loss_NDVI_L1 = torch.mean(torch.abs(num))*self.opt.lambda_NDVI
         
         # self.loss_NDVI_L1 = (
@@ -226,8 +226,8 @@ class CSA(BaseModel):
         #     )*self.opt.lambda_NDVI
          
         ### L1 with clouds loss                                                                                  
-        num = ((self.fake_B-self.real_B) + (self.fake_P-self.real_B)) * self.ex_mask +\
-                ((self.fake_P-self.real_A) + (self.fake_B-self.real_A)) * self.inv_ex_mask
+        num = ((self.fake_B - self.real_B) + (self.fake_P - self.real_B)) * self.ex_mask +\
+                ((self.fake_B - self.real_A) + (self.fake_P - self.real_A)) * self.inv_ex_mask
         self.loss_CARL_L1 = torch.mean(torch.abs(num))*self.opt.lambda_CARL
 
         self.loss_G_L1 = (
