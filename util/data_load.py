@@ -7,7 +7,7 @@ from glob import glob
 
 
 class Data_load(torch.utils.data.Dataset):
-    def __init__(self, img_root, mask_root, sent1_root, transform, normalization, data_cast):
+    def __init__(self, img_root, gt_root, mask_root, sent1_root, transform, normalization, data_cast):
         super(Data_load, self).__init__()
         self.transform = transform
         self.normalization = normalization
@@ -15,6 +15,9 @@ class Data_load(torch.utils.data.Dataset):
 
 
         self.paths = glob('{:s}/*'.format(img_root),
+                              recursive=True)
+
+        self.gt_paths = glob('{:s}/*'.format(gt_root),
                               recursive=True)
 
         self.s1_paths = glob('{:s}/*'.format(sent1_root),
@@ -28,8 +31,12 @@ class Data_load(torch.utils.data.Dataset):
         ### TODO: Change Image.open by either rasterio.open or np.load. Datatype is changed to uint8 during the transform operation
         # gt_img = rasterio.open(self.paths[index])
         
-        gt_img = np.load(self.paths[index])
-        # gt_img = self.transform(gt_img) ### Remove RGB transformation
+        img = np.load(self.paths[index])
+        img = self.data_cast[0](img)
+        img = torch.cat(tuple(self.transform(img[n, :, :]) for n in range(img.size(0))), 0) # im in format CxHxW
+        img = self.normalization[0](img)
+
+        gt_img = np.load(self.gt_paths[index])
         gt_img = self.data_cast[0](gt_img)
         gt_img = torch.cat(tuple(self.transform(gt_img[n, :, :]) for n in range(gt_img.size(0))), 0) # im in format CxHxW
         gt_img = self.normalization[0](gt_img)
@@ -47,7 +54,7 @@ class Data_load(torch.utils.data.Dataset):
         mask = self.transform(mask) ### Remove RGB transformation
         mask = mask.type(torch.bool)
         
-        return gt_img, mask, sent1
+        return img, gt_img, mask, sent1
 
     def __len__(self):
         return len(self.paths)

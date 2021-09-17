@@ -102,10 +102,9 @@ class CSA(BaseModel):
                 networks.print_network(self.netF)
             print('-----------------------------------------------')
 
-    def set_input(self,input, mask, sent1):
-
-        input_A = input
-        input_B = input.clone()
+    def set_input(self, input_A, input_B, mask, sent1):
+        input_A=input_A
+        input_B=input_B
         input_mask=mask
 
         self.input_A.resize_(input_A.size()).copy_(input_A)
@@ -210,10 +209,11 @@ class CSA(BaseModel):
 
         # Second, G(A) = B
         ### NDVI-CARL Loss
-        fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # TODO: rasterio shuffles bands when saving
+        fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # TODO: rasterio shuffles bands when saving, reorder them correctly
         fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
         real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
         real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
+
         num_P =  (fake_P_NDVI - real_B_NDVI) * self.ex_mask + (fake_P_NDVI - real_A_NDVI) * self.inv_ex_mask
         num_B =  (fake_B_NDVI - real_B_NDVI) * self.ex_mask + (fake_B_NDVI - real_A_NDVI) * self.inv_ex_mask
         self.loss_NDVI_L1 = (torch.mean(torch.abs(num_P)) + torch.mean(torch.abs(num_B))) * self.opt.lambda_NDVI
