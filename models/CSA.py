@@ -216,7 +216,7 @@ class CSA(BaseModel):
         real_A_NDVI = (self.real_A[:, 7, :, :] - self.real_A[:, 3, :, :])/(self.real_A[:, 7, :, :] + self.real_A[:, 3, :, :])
         num = ((fake_B_NDVI-real_B_NDVI) + (fake_P_NDVI-real_B_NDVI)) * self.ex_mask +\
                 ((fake_P_NDVI-real_A_NDVI) + (fake_B_NDVI-real_A_NDVI)) * self.inv_ex_mask
-        self.loss_CARL_L1 = torch.mean(torch.abs(num))*self.opt.lambda_CARL
+        self.loss_NDVI_L1 = torch.mean(torch.abs(num))*self.opt.lambda_NDVI
         
         # self.loss_NDVI_L1 = (
         #         self.criterionL1(fake_P_NDVI*self.ex_mask, real_B_NDVI*self.ex_mask) +\
