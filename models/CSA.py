@@ -209,20 +209,26 @@ class CSA(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake,pred_real, False)+self.criterionGAN(pred_fake_f, pred_real_F,False)
 
         # Second, G(A) = B
-        fake_P_NDVI = (self.fake_P[:, 3, :, :] - self.fake_P[:, 0, :, :])/(self.fake_P[:, 3, :, :] + self.fake_P[:, 0, :, :]) # NOTE: rasterio shuffles bands when saving
-        fake_B_NDVI = (self.fake_B[:, 3, :, :] - self.fake_B[:, 0, :, :])/(self.fake_B[:, 3, :, :] + self.fake_B[:, 0, :, :]) 
-        real_B_NDVI = (self.real_B[:, 3, :, :] - self.real_B[:, 0, :, :])/(self.real_B[:, 3, :, :] + self.real_B[:, 0, :, :])
+        ### NDVI Loss
+        fake_P_NDVI = (self.fake_P[:, 7, :, :] - self.fake_P[:, 3, :, :])/(self.fake_P[:, 7, :, :] + self.fake_P[:, 3, :, :]) # NOTE: rasterio shuffles bands when saving
+        fake_B_NDVI = (self.fake_B[:, 7, :, :] - self.fake_B[:, 3, :, :])/(self.fake_B[:, 7, :, :] + self.fake_B[:, 3, :, :]) 
+        real_B_NDVI = (self.real_B[:, 7, :, :] - self.real_B[:, 3, :, :])/(self.real_B[:, 7, :, :] + self.real_B[:, 3, :, :])
         self.loss_NDVI_L1 = (
             self.criterionL1(fake_P_NDVI, real_B_NDVI) + self.criterionL1(fake_B_NDVI, real_B_NDVI)
             )*self.opt.lambda_NDVI
+         
+        ### L1 with clouds loss
+        num = (self.fake_B-self.real_B)*self.ex_mask+(self.fake_P-self.real_B)*self.ex_mask+(self.fake_P-self.real_A)*self.inv_ex_mask
+        self.loss_CARL_L1 = torch.mean(torch.abs(num))*self.opt.lambda_CARL
+
         self.loss_G_L1 = (
-            self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B) # NDVI loss regularizer should be added here
+            self.criterionL1(self.fake_B, self.real_B) + self.criterionL1(self.fake_P, self.real_B)
             )* self.opt.lambda_A
 
 
-        self.loss_G = self.loss_NDVI_L1 + self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
+        self.loss_G = self.loss_NDVI_L1 + self.loss_CARL_L1 + self.loss_G_L1 + self.loss_G_GAN * self.opt.gan_weight
 
-        # Third add additional netG contraint loss!
+        # Third add additional netG constraint loss!
         self.ng_loss_value = 0
         self.ng_loss_value2 = 0
         if self.opt.cosis:
@@ -254,6 +260,7 @@ class CSA(BaseModel):
     def get_current_errors(self):
         return OrderedDict([('G_GAN', self.loss_G_GAN.data.item()),
                             ('G_L1_NDVI', self.loss_NDVI_L1.data.item()),
+                            ('G_L1_CARL', self.loss_CARL_L1),
                             ('G_L1', self.loss_G_L1.data.item()),
                             ('D', self.loss_D_fake.data.item()),
                             ('F', self.loss_F_fake.data.item())
