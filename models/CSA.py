@@ -260,7 +260,7 @@ class CSA(BaseModel):
     def get_current_errors(self):
         return OrderedDict([('G_GAN', self.loss_G_GAN.data.item()),
                             ('G_L1_NDVI', self.loss_NDVI_L1.data.item()),
-                            ('G_L1_CARL', self.loss_CARL_L1),
+                            ('G_L1_CARL', self.loss_CARL_L1.data.item()),
                             ('G_L1', self.loss_G_L1.data.item()),
                             ('D', self.loss_D_fake.data.item()),
                             ('F', self.loss_F_fake.data.item())
